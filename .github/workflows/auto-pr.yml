@@ -1,0 +1,88 @@
+name: Auto PR for 17.0 Branch
+
+on:
+  push:
+    branches:
+      - '17.0'
+
+jobs:
+  create-auto-pr:
+    runs-on: ubuntu-latest
+    # Only run if not a merge commit (to avoid infinite loops)
+    if: "!contains(github.event.head_commit.message, 'Merge pull request')"
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Validate code
+      id: validate
+      run: |
+        echo "Running validation checks..."
+
+        # Check Python syntax
+        python_files=$(find . -name "*.py" -not -path "./.git/*")
+        for file in $python_files; do
+          echo "Checking $file..."
+          python -m py_compile "$file" || exit 1
+        done
+
+        # Run check.py
+        if [ -f "check.py" ]; then
+          echo "Running check.py..."
+          python check.py || exit 1
+        fi
+
+        echo "validation_passed=true" >> $GITHUB_OUTPUT
+
+    - name: Create feature branch and PR
+      if: steps.validate.outputs.validation_passed == 'true'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Configure git
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        # Get commit details
+        COMMIT_SHA=$(git rev-parse --short HEAD)
+        COMMIT_MSG=$(git log -1 --pretty=%B | head -n 1)
+        TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+        # Create feature branch
+        FEATURE_BRANCH="feature/auto-${TIMESTAMP}-${COMMIT_SHA}"
+        git checkout -b "$FEATURE_BRANCH"
+        git push origin "$FEATURE_BRANCH"
+
+        # Create PR using GitHub CLI
+        gh pr create \
+          --base 17.0 \
+          --head "$FEATURE_BRANCH" \
+          --title "Auto PR: $COMMIT_MSG" \
+          --body "## Summary
+        Automatic PR created from push to 17.0
+
+        **Commit**: $COMMIT_SHA
+        **Message**: $COMMIT_MSG
+
+        ## Validation Status
+        ✅ All validation checks passed
+
+        ## Test plan
+        - [x] Python syntax check passed
+        - [x] check.py executed successfully
+
+        🤖 Auto-generated PR - Generated with [Claude Code](https://claude.com/claude-code)"
+
+    - name: Validation failed
+      if: steps.validate.outputs.validation_passed != 'true'
+      run: |
+        echo "❌ Validation failed - PR not created"
+        exit 1
