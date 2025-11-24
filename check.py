@@ -9,10 +9,10 @@ def calculate(a, b):
     Returns:
         Sum of a and b
     """
-    return a/b
+    return a + b
 
 
 if __name__ == "__main__":
     # Example usage
-    result = calculate(100, 0)
+    result = calculate(1000, 1)
     print(f"Result: {result}")

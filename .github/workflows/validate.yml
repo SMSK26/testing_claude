@@ -1,0 +1,57 @@
+name: Code Validation
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Check Python syntax
+      run: |
+        echo "Checking Python syntax..."
+        python_files=$(find . -name "*.py" -not -path "./.git/*")
+        for file in $python_files; do
+          echo "Checking $file..."
+          python -m py_compile "$file"
+        done
+        echo "✓ Python syntax check passed"
+
+    - name: Run check.py
+      run: |
+        if [ -f "check.py" ]; then
+          echo "Running check.py..."
+          python check.py
+          echo "✓ check.py executed successfully"
+        fi
+
+    - name: Validation successful
+      run: echo "✓ All validation checks passed!"
+
+  auto-merge:
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.actor == 'SMSK26'
+
+    steps:
+    - name: Auto-merge PR
+      uses: pascalgn/automerge-action@v0.16.3
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        MERGE_LABELS: ""
+        MERGE_METHOD: merge
+        MERGE_COMMIT_MESSAGE: "pull-request-title"
+        MERGE_RETRIES: 6
+        MERGE_RETRY_SLEEP: 10000
