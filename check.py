@@ -1,18 +1,18 @@
 def calculate(a, b):
     """
-    Simple calculation function that adds two numbers.
+    Simple calculation function that Devides two numbers.
 
     Args:
         a: First number
         b: Second number
 
     Returns:
-        Sum of a and b
+        Division of a and b
     """
-    return a + b
+    return a / b
 
 
 if __name__ == "__main__":
     # Example usage
-    result = calculate(1000, 1)
+    result = calculate(10, 5)
     print(f"Result: {result}")
