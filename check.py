@@ -14,5 +14,5 @@ def calculate(a, b):
 
 if __name__ == "__main__":
     # Example usage
-    result = calculate(10, 0)
+    result = calculate(100, 0)
     print(f"Result: {result}")
